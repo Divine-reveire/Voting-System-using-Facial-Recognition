@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vote</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        video, canvas { display: block; margin: 20px auto; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .vote-options { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Face Recognition for Voting</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    <button id="recognize">Recognize Face</button>
+    <p id="status"></p>
+    <div id="vote-options" class="vote-options">
+        <h2>Welcome, <span id="voter-name"></span></h2>
+        <p>Press 1 for BJP, 2 for CONGRESS, 3 for AAP, 4 for NOTA</p>
+        <button class="vote-btn" data-vote="BJP">BJP (1)</button>
+        <button class="vote-btn" data-vote="CONGRESS">CONGRESS (2)</button>
+        <button class="vote-btn" data-vote="AAP">AAP (3)</button>
+        <button class="vote-btn" data-vote="NOTA">NOTA (4)</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const recognizeBtn = document.getElementById('recognize');
+        const status = document.getElementById('status');
+        const voteOptions = document.getElementById('vote-options');
+        const voterName = document.getElementById('voter-name');
+
+        let recognizedName = null;
+        let intervalId = null;
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                // Start continuous recognition
+                intervalId = setInterval(recognizeFace, 1000);
+            })
+            .catch(err => {
+                console.error('Error accessing webcam:', err);
+            });
+
+        function recognizeFace() {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, 640, 480);
+            const imageData = canvas.toDataURL('image/png');
+
+            fetch('/recognize_face', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.recognized) {
+                    if (data.already_voted) {
+                        status.textContent = `${data.name}, you have already voted!`;
+                        speak("YOU HAVE ALREADY VOTED");
+                        clearInterval(intervalId);
+                    } else {
+                        recognizedName = data.name;
+                        voterName.textContent = data.name;
+                        voteOptions.style.display = 'block';
+                        recognizeBtn.style.display = 'none';
+                        status.textContent = '';
+                        clearInterval(intervalId);
+                        // Listen for key presses
+                        document.addEventListener('keydown', handleKeyPress);
+                    }
+                } else {
+                    status.textContent = 'Face not recognized. Keep your face in front of the camera.';
+                }
+            });
+        }
+
+        function handleKeyPress(event) {
+            let vote = null;
+            if (event.key === '1') vote = 'BJP';
+            else if (event.key === '2') vote = 'CONGRESS';
+            else if (event.key === '3') vote = 'AAP';
+            else if (event.key === '4') vote = 'NOTA';
+
+            if (vote && recognizedName) {
+                fetch('/submit_vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: recognizedName, vote: vote })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        status.textContent = 'Vote recorded successfully! Thank you.';
+                        voteOptions.style.display = 'none';
+                        speak("YOUR VOTE HAS BEEN RECORDED. THANK YOU FOR PARTICIPATING IN THE ELECTIONS");
+                        document.removeEventListener('keydown', handleKeyPress);
+                        // Show popup with vote details
+                        setTimeout(() => {
+                            showVotePopup(recognizedName, vote);
+                        }, 2000);
+                    }
+                });
+            }
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function showVotePopup(name, vote) {
+            fetch('/get_vote_details')
+            .then(response => response.json())
+            .then(data => {
+                // Create popup overlay
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                overlay.style.display = 'flex';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+                overlay.style.zIndex = '1000';
+
+                // Create popup content
+                const popup = document.createElement('div');
+                popup.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                popup.style.padding = '40px';
+                popup.style.borderRadius = '20px';
+                popup.style.boxShadow = '0 20px 40px rgba(0,0,0,0.3)';
+                popup.style.maxWidth = '500px';
+                popup.style.width = '90%';
+                popup.style.textAlign = 'center';
+                popup.style.color = 'white';
+                popup.style.animation = 'popupAppear 0.5s ease-out';
+
+                popup.innerHTML = `
+                    <div style="font-size: 48px; margin-bottom: 20px;">✅</div>
+                    <h2 style="margin-bottom: 30px; font-size: 28px;">Vote Recorded Successfully!</h2>
+                    <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                        <div style="margin-bottom: 15px;"><strong>Name:</strong> ${data.name}</div>
+                        <div style="margin-bottom: 15px;"><strong>Voter ID:</strong> ${data.voterid}</div>
+                        <div style="margin-bottom: 15px;"><strong>Vote Casted:</strong> ${data.vote}</div>
+                        <div style="margin-bottom: 15px;"><strong>Date:</strong> ${data.date}</div>
+                        <div style="margin-bottom: 15px;"><strong>Aadhar Card Number:</strong> ${data.aadhar}</div>
+                    </div>
+                    <p style="font-style: italic;">Thank you for participating in the elections!</p>
+                `;
+
+                overlay.appendChild(popup);
+                document.body.appendChild(overlay);
+
+                // Auto close after 5 seconds
+                setTimeout(() => {
+                    overlay.style.animation = 'popupDisappear 0.5s ease-in';
+                    setTimeout(() => {
+                        document.body.removeChild(overlay);
+                        // Return to homepage after popup
+                        window.location.href = '/';
+                    }, 500);
+                }, 5000);
+
+                // Add CSS animations
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes popupAppear {
+                        from { transform: scale(0.7); opacity: 0; }
+                        to { transform: scale(1); opacity: 1; }
+                    }
+                    @keyframes popupDisappear {
+                        from { transform: scale(1); opacity: 1; }
+                        to { transform: scale(0.7); opacity: 0; }
+                `;
+                document.head.appendChild(style);
+            });
+        }
+    </script>
+</body>
+</html>

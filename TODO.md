@@ -1,0 +1,14 @@
+- [x] Update requirements.txt to add Flask
+- [x] Create web_app.py with Flask app and routes for Aadhar entry, face capture, and voting
+- [x] Create templates directory and HTML files (index.html for Aadhar, capture.html for face, vote.html for voting)
+- [x] Create static directory with JS for webcam access (not needed, JS in templates)
+- [x] Modify face capture logic in web_app.py to receive images from browser
+- [x] Add route to run the app and open browser automatically
+- [x] Test the web app by running it (server started, browser opened, Flask installed)
+- [x] Update index.html to include Name, DOB, VoterID, Phone fields
+- [x] Update web_app.py routes to handle multiple details and use VoterID for face capture
+- [x] Update capture.html to use VoterID
+- [x] Test updated flow (fixed URL error, server reloaded)
+- [x] Fix speech synthesis compatibility in vote.html
+- [x] Add validation for Aadhar Card Number (exactly 12 digits, only numbers, unique)
+- [x] Fix popup not appearing after voting and auto-redirect to homepage

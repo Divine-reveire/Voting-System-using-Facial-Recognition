@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting System - Enter Details</title>
+    <style>
+        body { font-family: 'Roboto', sans-serif; background: #2c3e50; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; }
+        .form-container { background: rgba(255, 255, 255, 0.1); padding: 40px; border-radius: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); max-width: 400px; width: 100%; }
+        h1 { text-align: center; margin-bottom: 30px; font-weight: 300; }
+        form { display: flex; flex-direction: column; }
+        input { padding: 15px; margin: 10px 0; border: none; border-radius: 10px; font-size: 16px; background: rgba(255, 255, 255, 0.9); color: #333; }
+        input::placeholder { color: #666; }
+        button { padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; margin-top: 20px; transition: background 0.3s; }
+        button:hover { background: #c0392b; }
+        .icon { text-align: center; font-size: 48px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <div class="icon">🗳️</div>
+        <h1>Enter Your Details</h1>
+        <form action="/enter_details" method="post">
+            <input type="text" name="name" placeholder="Full Name" required>
+            <input type="date" name="dob" placeholder="Date of Birth (dd-mm-yyyy)" required>
+            <input type="text" name="aadhar" placeholder="Aadhar Card Number" pattern="^\d{12}$" maxlength="12" title="Aadhar Card Number must be exactly 12 digits" required>
+            <input type="text" name="voterid" placeholder="Voter ID Card Number" required>
+            <input type="tel" name="phone" placeholder="Phone Number" required>
+            <button type="submit">Next</button>
+        </form>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div style="color: red; margin-top: 20px;">
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+</body>
+</html>
