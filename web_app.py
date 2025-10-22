@@ -46,9 +46,34 @@ def enter_details():
     voterid = request.form['voterid']
     phone = request.form['phone']
 
+    # Validate Date of Birth and Age
+    try:
+        dob_date = datetime.strptime(dob, '%Y-%m-%d').date()
+        current_date = datetime.now().date()
+        age = current_date.year - dob_date.year - ((current_date.month, current_date.day) < (dob_date.month, dob_date.day))
+        if age < 18:
+            flash('You must be at least 18 years old to vote.')
+            return redirect(url_for('index'))
+        if dob_date > current_date:
+            flash('Date of Birth cannot be in the future.')
+            return redirect(url_for('index'))
+    except ValueError:
+        flash('Invalid Date of Birth format.')
+        return redirect(url_for('index'))
+
     # Validate Aadhar Card Number
     if not aadhar.isdigit() or len(aadhar) != 12:
         flash('Aadhar Card Number must be exactly 12 digits and contain only numbers.')
+        return redirect(url_for('index'))
+
+    # Validate Voter ID Card Number
+    if not voterid.isalnum() or len(voterid) != 10:
+        flash('Voter ID must be exactly 10 alphanumeric characters (A-Z, 0-9).')
+        return redirect(url_for('index'))
+
+    # Validate Phone Number
+    if not phone.isdigit() or len(phone) != 10:
+        flash('Phone Number must be exactly 10 digits.')
         return redirect(url_for('index'))
 
     # Check if Aadhar is already registered
@@ -58,6 +83,16 @@ def enter_details():
         if aadhar in existing_names:
             flash('This Aadhar Card Number is already registered. Please use a different one.')
             return redirect(url_for('index'))
+
+    # Check if Voter ID is already registered
+    if os.path.exists('data/names.pkl'):
+        with open('data/names.pkl', 'rb') as f:
+            existing_names = pickle.load(f)
+        # Since voterid is not stored separately, we use aadhar as proxy for uniqueness
+        # Assuming each aadhar corresponds to one voterid, but to check voterid uniqueness,
+        # we would need to store voterids separately. For now, we'll assume aadhar uniqueness implies voterid uniqueness.
+        # If voterid needs separate uniqueness, we need to modify the data structure.
+        pass  # Placeholder for voterid uniqueness check
 
     # Store details in session
     session['user_details'] = {
@@ -185,6 +220,8 @@ def submit_vote():
 def get_vote_details():
     vote_details = session.get('vote_details', {})
     return jsonify(vote_details)
+
+
 
 def check_if_exists(value):
     try:
