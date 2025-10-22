@@ -38,6 +38,38 @@ load_face_data()
 def index():
     return render_template('index.html')
 
+@app.route('/voter_login')
+def voter_login():
+    return render_template('voter_login.html')
+
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+
+@app.route('/admin_stats')
+def admin_stats():
+    # Count total registered voters
+    total_voters = 0
+    if os.path.exists('data/names.pkl'):
+        with open('data/names.pkl', 'rb') as f:
+            names = pickle.load(f)
+        total_voters = len(set(names))  # Unique Aadhar numbers
+
+    # Count votes cast
+    votes_cast = 0
+    if os.path.exists('Votes.csv'):
+        with open('Votes.csv', 'r') as f:
+            votes_cast = sum(1 for line in f) - 1  # Subtract header
+
+    # For now, duplicate attempts is a placeholder
+    duplicate_attempts = 0
+
+    return jsonify({
+        'total_voters': total_voters,
+        'votes_cast': votes_cast,
+        'duplicate_attempts': duplicate_attempts
+    })
+
 @app.route('/enter_details', methods=['POST'])
 def enter_details():
     name = request.form['name']
@@ -85,14 +117,12 @@ def enter_details():
             return redirect(url_for('index'))
 
     # Check if Voter ID is already registered
-    if os.path.exists('data/names.pkl'):
-        with open('data/names.pkl', 'rb') as f:
-            existing_names = pickle.load(f)
-        # Since voterid is not stored separately, we use aadhar as proxy for uniqueness
-        # Assuming each aadhar corresponds to one voterid, but to check voterid uniqueness,
-        # we would need to store voterids separately. For now, we'll assume aadhar uniqueness implies voterid uniqueness.
-        # If voterid needs separate uniqueness, we need to modify the data structure.
-        pass  # Placeholder for voterid uniqueness check
+    if os.path.exists('data/voterids.pkl'):
+        with open('data/voterids.pkl', 'rb') as f:
+            existing_voterids = pickle.load(f)
+        if voterid in existing_voterids:
+            flash('This Voter ID is already registered. Please use a different one.')
+            return redirect(url_for('index'))
 
     # Store details in session
     session['user_details'] = {
@@ -123,10 +153,20 @@ def save_face(aadhar):
         crop_img = frame[y:y+h, x:x+w]
         resized_img = cv2.resize(crop_img, (50, 50)).flatten().reshape(1, -1)
 
+        # Check for similar faces if KNN is trained
+        if knn is not None:
+            distances, indices = knn.kneighbors(resized_img, n_neighbors=1)
+            if distances[0][0] < 0.05:  # Even stricter threshold for similarity to prevent duplicates
+                return jsonify({'success': False, 'error': 'Face already registered. Please use a different face.'})
+
         # Save face data - replicate to match original structure (51 samples per person)
         frames_total = 51
         faces_data_single = resized_img
         faces_data = np.tile(faces_data_single, (frames_total, 1))
+
+        # Get voterid from session
+        user_details = session.get('user_details', {})
+        voterid = user_details.get('voterid', '')
 
         # Save face data
         if not os.path.exists('data/'):
@@ -134,17 +174,26 @@ def save_face(aadhar):
 
         if 'names.pkl' not in os.listdir('data/'):
             names = [aadhar] * frames_total
+            voterids = [voterid] * frames_total
             all_faces_data = faces_data
         else:
             with open('data/names.pkl', 'rb') as f:
                 names = pickle.load(f)
             names += [aadhar] * frames_total
+            if 'voterids.pkl' not in os.listdir('data/'):
+                voterids = [voterid] * frames_total
+            else:
+                with open('data/voterids.pkl', 'rb') as f:
+                    voterids = pickle.load(f)
+                voterids += [voterid] * frames_total
             with open('data/faces_data.pkl', 'rb') as f:
                 all_faces_data = pickle.load(f)
             all_faces_data = np.append(all_faces_data, faces_data, axis=0)
 
         with open('data/names.pkl', 'wb') as f:
             pickle.dump(names, f)
+        with open('data/voterids.pkl', 'wb') as f:
+            pickle.dump(voterids, f)
         with open('data/faces_data.pkl', 'wb') as f:
             pickle.dump(all_faces_data, f)
 
@@ -173,7 +222,14 @@ def recognize_face():
         output = knn.predict(resized_img)
         voter_exist = check_if_exists(output[0])
         if voter_exist:
-            return jsonify({'recognized': True, 'name': output[0], 'already_voted': True})
+            # Get vote details for already voted user
+            vote_details = get_vote_details_for_aadhar(output[0])
+            return jsonify({
+                'recognized': True,
+                'name': output[0],
+                'already_voted': True,
+                'vote_details': vote_details
+            })
         return jsonify({'recognized': True, 'name': output[0], 'already_voted': False})
     return jsonify({'recognized': False})
 
@@ -233,6 +289,22 @@ def check_if_exists(value):
     except FileNotFoundError:
         pass
     return False
+
+def get_vote_details_for_aadhar(aadhar):
+    try:
+        with open("Votes.csv", "r") as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader, None)  # Skip header
+            for row in reader:
+                if row and row[0] == aadhar:
+                    return {
+                        'vote': row[1],
+                        'date': row[2],
+                        'time': row[3]
+                    }
+    except FileNotFoundError:
+        pass
+    return None
 
 if __name__ == '__main__':
     def open_browser():

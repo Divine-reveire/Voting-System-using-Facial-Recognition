@@ -1,14 +1,9 @@
-- [x] Update requirements.txt to add Flask
-- [x] Create web_app.py with Flask app and routes for Aadhar entry, face capture, and voting
-- [x] Create templates directory and HTML files (index.html for Aadhar, capture.html for face, vote.html for voting)
-- [x] Create static directory with JS for webcam access (not needed, JS in templates)
-- [x] Modify face capture logic in web_app.py to receive images from browser
-- [x] Add route to run the app and open browser automatically
-- [x] Test the web app by running it (server started, browser opened, Flask installed)
-- [x] Update index.html to include Name, DOB, VoterID, Phone fields
-- [x] Update web_app.py routes to handle multiple details and use VoterID for face capture
-- [x] Update capture.html to use VoterID
-- [x] Test updated flow (fixed URL error, server reloaded)
-- [x] Fix speech synthesis compatibility in vote.html
-- [x] Add validation for Aadhar Card Number (exactly 12 digits, only numbers, unique)
-- [x] Fix popup not appearing after voting and auto-redirect to homepage
+# TODO: Prevent Duplicate Face Registrations and Ensure Voting Prevention
+
+## Steps to Complete
+
+- [x] Modify `enter_details` in `web_app.py` to check Voter ID uniqueness by loading and checking `data/voterids.pkl`.
+- [x] Update `save_face` in `web_app.py` to include Voter ID in the storage logic and add face similarity check using KNN distance threshold.
+- [x] Create and initialize `data/voterids.pkl` if it doesn't exist, storing Voter IDs parallel to names.
+- [x] Test registration flow to ensure duplicate Voter IDs and similar faces are rejected.
+- [x] Test voting flow to confirm prevention works based on face recognition.

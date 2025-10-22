@@ -47,6 +47,8 @@
                 if (data.success) {
                     status.textContent = 'Face captured successfully! Redirecting...';
                     setTimeout(() => window.location.href = '/vote', 2000);
+                } else if (data.error) {
+                    status.textContent = data.error;
                 } else {
                     status.textContent = 'No face detected. Try again.';
                 }

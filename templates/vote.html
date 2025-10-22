@@ -62,7 +62,10 @@
                 if (data.recognized) {
                     if (data.already_voted) {
                         status.textContent = `${data.name}, you have already voted!`;
+                        alert(`${data.name}, you have already voted for ${data.vote_details ? data.vote_details.vote : 'unknown'} on ${data.vote_details ? data.vote_details.date : 'unknown'} at ${data.vote_details ? data.vote_details.time : 'unknown'}!`);
                         speak("YOU HAVE ALREADY VOTED");
+                        // Show vote details popup
+                        showAlreadyVotedPopup(data.name, data.vote_details);
                         clearInterval(intervalId);
                     } else {
                         recognizedName = data.name;
@@ -184,6 +187,74 @@
                 `;
                 document.head.appendChild(style);
             });
+        }
+
+        function showAlreadyVotedPopup(name, voteDetails) {
+            // Create popup overlay
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            overlay.style.display = 'flex';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+            overlay.style.zIndex = '1000';
+
+            // Create popup content
+            const popup = document.createElement('div');
+            popup.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+            popup.style.padding = '40px';
+            popup.style.borderRadius = '20px';
+            popup.style.boxShadow = '0 20px 40px rgba(0,0,0,0.3)';
+            popup.style.maxWidth = '500px';
+            popup.style.width = '90%';
+            popup.style.textAlign = 'center';
+            popup.style.color = 'white';
+            popup.style.animation = 'popupAppear 0.5s ease-out';
+
+            popup.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                <h2 style="margin-bottom: 30px; font-size: 28px;">Already Voted!</h2>
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                    <div style="margin-bottom: 15px;"><strong>Name:</strong> ${name}</div>
+                    <div style="margin-bottom: 15px;"><strong>Vote Casted:</strong> ${voteDetails.vote}</div>
+                    <div style="margin-bottom: 15px;"><strong>Date:</strong> ${voteDetails.date}</div>
+                    <div style="margin-bottom: 15px;"><strong>Time:</strong> ${voteDetails.time}</div>
+                </div>
+                <p style="font-style: italic;">You have already participated in the elections.</p>
+            `;
+
+            overlay.appendChild(popup);
+            document.body.appendChild(overlay);
+
+            // Speak the details
+            speak(`You have already voted for ${voteDetails.vote} on ${voteDetails.date} at ${voteDetails.time}`);
+
+            // Auto close after 8 seconds
+            setTimeout(() => {
+                overlay.style.animation = 'popupDisappear 0.5s ease-in';
+                setTimeout(() => {
+                    document.body.removeChild(overlay);
+                    // Return to homepage after popup
+                    window.location.href = '/';
+                }, 500);
+            }, 8000);
+
+            // Add CSS animations
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes popupAppear {
+                    from { transform: scale(0.7); opacity: 0; }
+                    to { transform: scale(1); opacity: 1; }
+                }
+                @keyframes popupDisappear {
+                    from { transform: scale(1); opacity: 1; }
+                    to { transform: scale(0.7); opacity: 0; }
+            `;
+            document.head.appendChild(style);
         }
     </script>
 </body>
