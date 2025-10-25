@@ -28,7 +28,7 @@
             <input type="text" name="aadhar" placeholder="Aadhar Card Number" pattern="^\d{12}$" maxlength="12" title="Aadhar Card Number must be exactly 12 digits" required>
             <input type="text" name="voterid" placeholder="Voter ID Card Number" pattern="^[A-Z0-9]{10}$" maxlength="10" title="Voter ID must be exactly 10 alphanumeric characters (A-Z, 0-9)" oninput="this.value = this.value.toUpperCase()" required>
             <input type="tel" name="phone" placeholder="Phone Number" pattern="^\d{10}$" maxlength="10" title="Phone Number must be exactly 10 digits" required>
-            <button type="submit">Proceed to Face Registration</button>
+            <button type="submit">Face Capture</button>
         </form>
         <button class="back-btn" onclick="window.location.href='/'">Back to Home</button>
         {% with messages = get_flashed_messages() %}

@@ -11,19 +11,16 @@
         .vote-options { display: none; }
     </style>
 </head>
-<body>
-    <h1>Face Recognition for Voting</h1>
+<body data-admin-vote="{{ admin_vote|tojson }}">
+    <h1 id="page-title">Face Recognition for Voting</h1>
     <video id="video" width="640" height="480" autoplay></video>
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
     <button id="recognize">Recognize Face</button>
     <p id="status"></p>
     <div id="vote-options" class="vote-options">
         <h2>Welcome, <span id="voter-name"></span></h2>
-        <p>Press 1 for BJP, 2 for CONGRESS, 3 for AAP, 4 for NOTA</p>
-        <button class="vote-btn" data-vote="BJP">BJP (1)</button>
-        <button class="vote-btn" data-vote="CONGRESS">CONGRESS (2)</button>
-        <button class="vote-btn" data-vote="AAP">AAP (3)</button>
-        <button class="vote-btn" data-vote="NOTA">NOTA (4)</button>
+        <p id="vote-instructions">Loading candidates...</p>
+        <div id="candidates-buttons"></div>
     </div>
 
     <script>
@@ -33,19 +30,33 @@
         const status = document.getElementById('status');
         const voteOptions = document.getElementById('vote-options');
         const voterName = document.getElementById('voter-name');
+        const pageTitle = document.getElementById('page-title');
 
         let recognizedName = null;
         let intervalId = null;
 
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                video.srcObject = stream;
-                // Start continuous recognition
-                intervalId = setInterval(recognizeFace, 1000);
-            })
-            .catch(err => {
-                console.error('Error accessing webcam:', err);
-            });
+        // Check if this is admin voting
+        const adminVote = document.body.getAttribute('data-admin-vote') === 'true';
+
+        if (adminVote) {
+            pageTitle.textContent = 'Admin Voting';
+            // Skip face recognition for admin voting
+            loadCandidatesForVoting();
+            voteOptions.style.display = 'block';
+            recognizeBtn.style.display = 'none';
+            video.style.display = 'none';
+            status.textContent = 'Admin voting mode - select candidate to vote on behalf of voter';
+        } else {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                    // Start continuous recognition
+                    intervalId = setInterval(recognizeFace, 1000);
+                })
+                .catch(err => {
+                    console.error('Error accessing webcam:', err);
+                });
+        }
 
         function recognizeFace() {
             const context = canvas.getContext('2d');
@@ -70,6 +81,7 @@
                     } else {
                         recognizedName = data.name;
                         voterName.textContent = data.name;
+                        loadCandidatesForVoting();
                         voteOptions.style.display = 'block';
                         recognizeBtn.style.display = 'none';
                         status.textContent = '';
@@ -83,33 +95,89 @@
             });
         }
 
+        function loadCandidatesForVoting() {
+            fetch('/get_candidates')
+            .then(response => response.json())
+            .then(data => {
+                const instructions = document.getElementById('vote-instructions');
+                const buttonsDiv = document.getElementById('candidates-buttons');
+                buttonsDiv.innerHTML = '';
+
+                if (data.candidates && data.candidates.length > 0) {
+                    instructions.textContent = 'Select your candidate by clicking the button or pressing the corresponding number key:';
+                    data.candidates.forEach((candidate, index) => {
+                        const button = document.createElement('button');
+                        button.className = 'vote-btn';
+                        button.setAttribute('data-vote', candidate.name);
+                        button.setAttribute('data-key', (index + 1).toString());
+                        button.style.display = 'block';
+                        button.style.width = '100%';
+                        button.style.margin = '10px 0';
+                        button.style.padding = '15px';
+                        button.style.fontSize = '18px';
+                        button.style.background = '#007bff';
+                        button.style.color = 'white';
+                        button.style.border = 'none';
+                        button.style.borderRadius = '10px';
+                        button.style.cursor = 'pointer';
+
+                        let iconHtml = '';
+                        if (candidate.icon) {
+                            iconHtml = `<img src="/${candidate.icon}" alt="${candidate.group} icon" style="width: 30px; height: 30px; margin-right: 10px; vertical-align: middle;">`;
+                        }
+
+                        button.innerHTML = `${index + 1}. ${iconHtml}<strong>${candidate.name}</strong> (${candidate.position}) - ${candidate.group}`;
+                        button.onclick = () => submitVote(candidate.name);
+                        buttonsDiv.appendChild(button);
+                    });
+                } else {
+                    instructions.textContent = 'No candidates available. Please contact administrator.';
+                }
+            })
+            .catch(err => {
+                console.error('Error loading candidates:', err);
+                document.getElementById('vote-instructions').textContent = 'Error loading candidates.';
+            });
+        }
+
         function handleKeyPress(event) {
+            const buttons = document.querySelectorAll('.vote-btn');
             let vote = null;
-            if (event.key === '1') vote = 'BJP';
-            else if (event.key === '2') vote = 'CONGRESS';
-            else if (event.key === '3') vote = 'AAP';
-            else if (event.key === '4') vote = 'NOTA';
+
+            buttons.forEach(button => {
+                if (button.getAttribute('data-key') === event.key) {
+                    vote = button.getAttribute('data-vote');
+                }
+            });
 
             if (vote && recognizedName) {
-                fetch('/submit_vote', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: recognizedName, vote: vote })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        status.textContent = 'Vote recorded successfully! Thank you.';
-                        voteOptions.style.display = 'none';
-                        speak("YOUR VOTE HAS BEEN RECORDED. THANK YOU FOR PARTICIPATING IN THE ELECTIONS");
-                        document.removeEventListener('keydown', handleKeyPress);
-                        // Show popup with vote details
-                        setTimeout(() => {
-                            showVotePopup(recognizedName, vote);
-                        }, 2000);
-                    }
-                });
+                submitVote(vote);
             }
+        }
+
+        function submitVote(vote) {
+            fetch('/submit_vote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: recognizedName, vote: vote })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    status.textContent = 'Vote recorded successfully! Thank you.';
+                    voteOptions.style.display = 'none';
+                    speak("YOUR VOTE HAS BEEN RECORDED. THANK YOU FOR PARTICIPATING IN THE ELECTIONS");
+                    document.removeEventListener('keydown', handleKeyPress);
+                    // Show popup with vote details
+                    setTimeout(() => {
+                        showVotePopup(recognizedName, vote);
+                    }, 2000);
+                }
+            })
+            .catch(err => {
+                console.error('Error submitting vote:', err);
+                status.textContent = 'Error recording vote. Please try again.';
+            });
         }
 
         function speak(text) {

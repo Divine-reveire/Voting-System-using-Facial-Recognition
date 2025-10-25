@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting Results - Voting System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .candidate-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .candidate-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .vote-count {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+
+        .percentage {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+
+        .voters-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .voter-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .voter-info {
+            flex: 1;
+        }
+
+        .voter-aadhar {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .voter-details {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .voter-vote {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .back-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #2980b9;
+        }
+
+        .buttons {
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 10px;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Voting Results</h1>
+        <p>Real-time Election Statistics</p>
+    </div>
+
+    <div class="container">
+        <div class="chart-container">
+            <h2>Vote Distribution</h2>
+            <canvas id="resultsChart" width="400" height="200"></canvas>
+        </div>
+
+        <div class="results-grid" id="results-grid">
+            <!-- Results will be populated here -->
+        </div>
+
+        <div class="chart-container">
+            <h2>🗳️ Voters Who Have Voted</h2>
+            <div class="voters-list" id="voters-list">
+                <!-- Voters list will be populated here -->
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="back-btn" onclick="window.location.href='/admin'">Back to Dashboard</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let resultsChart;
+
+        function loadResults() {
+            fetch('/get_voting_results')
+            .then(response => response.json())
+            .then(data => {
+                displayResults(data.results);
+                updateChart(data.results);
+            })
+            .catch(err => {
+                console.error('Error loading results:', err);
+            });
+        }
+
+        function displayResults(results) {
+            const resultsGrid = document.getElementById('results-grid');
+            resultsGrid.innerHTML = '';
+
+            results.forEach(result => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                card.innerHTML = `
+                    <span class="candidate-icon">${result.icon || '👤'}</span>
+                    <div class="candidate-name">${result.name}</div>
+                    <div class="vote-count">${result.votes}</div>
+                    <div class="percentage">${result.percentage}%</div>
+                `;
+                resultsGrid.appendChild(card);
+            });
+        }
+
+        function updateChart(results) {
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+
+            if (resultsChart) {
+                resultsChart.destroy();
+            }
+
+            const labels = results.map(r => r.name);
+            const votes = results.map(r => r.votes);
+            const colors = [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+            ];
+
+            resultsChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: votes,
+                        backgroundColor: colors.slice(0, results.length),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadVotersList() {
+            fetch('/get_voters_list')
+            .then(response => response.json())
+            .then(data => {
+                displayVotersList(data.voters);
+            })
+            .catch(err => {
+                console.error('Error loading voters list:', err);
+            });
+        }
+
+        function displayVotersList(voters) {
+            const votersList = document.getElementById('voters-list');
+            votersList.innerHTML = '';
+
+            if (voters.length === 0) {
+                votersList.innerHTML = '<p style="text-align: center; opacity: 0.7;">No votes cast yet.</p>';
+                return;
+            }
+
+            voters.forEach(voter => {
+                const voterItem = document.createElement('div');
+                voterItem.className = 'voter-item';
+                voterItem.innerHTML = `
+                    <div class="voter-info">
+                        <div class="voter-aadhar">${voter.aadhar}</div>
+                        <div class="voter-details">${voter.date} at ${voter.time}</div>
+                    </div>
+                    <div class="voter-vote">${voter.vote}</div>
+                `;
+                votersList.appendChild(voterItem);
+            });
+        }
+
+        // Load results and voters list on page load
+        loadResults();
+        loadVotersList();
+    </script>
+</body>
+</html>

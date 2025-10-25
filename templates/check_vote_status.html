@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Vote Status</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; min-height: 100vh; }
+        video, canvas { display: block; margin: 20px auto; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 5px; }
+        .status-container { background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px; margin: 20px auto; max-width: 600px; }
+        .vote-details { background: rgba(255, 255, 255, 0.2); padding: 15px; border-radius: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Check Vote Status</h1>
+    <p>Please position your face in front of the camera to verify your identity and check your voting status.</p>
+    <video id="video" width="640" height="480" autoplay></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    <p id="status">Initializing camera...</p>
+    <div id="status-container" class="status-container" style="display:none;">
+        <h2 id="result-title"></h2>
+        <div id="vote-details" class="vote-details"></div>
+        <button id="proceed-btn" style="display:none;">Proceed to Vote</button>
+        <button id="back-btn" onclick="window.location.href='/'">Back to Home</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const status = document.getElementById('status');
+        const statusContainer = document.getElementById('status-container');
+        const resultTitle = document.getElementById('result-title');
+        const voteDetails = document.getElementById('vote-details');
+        const proceedBtn = document.getElementById('proceed-btn');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                status.textContent = 'Face detected. Checking status...';
+                // Start recognition
+                setTimeout(recognizeFace, 2000);
+            })
+            .catch(err => {
+                console.error('Error accessing webcam:', err);
+                status.textContent = 'Error accessing camera. Please allow camera access.';
+            });
+
+        function recognizeFace() {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, 640, 480);
+            const imageData = canvas.toDataURL('image/png');
+
+            fetch('/recognize_face', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.recognized) {
+                    statusContainer.style.display = 'block';
+                    video.style.display = 'none';
+                    status.style.display = 'none';
+                    if (data.already_voted) {
+                        resultTitle.textContent = 'You Have Already Voted';
+                        voteDetails.innerHTML = `
+                            <p><strong>Name:</strong> ${data.name}</p>
+                            <p><strong>Voter ID:</strong> ${data.voterid || 'N/A'}</p>
+                            <p><strong>Voted For:</strong> ${data.vote_details.vote}</p>
+                            <p><strong>Date:</strong> ${data.vote_details.date}</p>
+                            <p><strong>Time:</strong> ${data.vote_details.time}</p>
+                        `;
+                        proceedBtn.style.display = 'none';
+                    } else {
+                        resultTitle.textContent = 'You Have Not Voted Yet';
+                        voteDetails.innerHTML = `
+                            <p><strong>Name:</strong> ${data.name}</p>
+                            <p><strong>Voter ID:</strong> ${data.voterid || 'N/A'}</p>
+                            <p>You are eligible to vote. Click "Proceed to Vote" to continue.</p>
+                        `;
+                        proceedBtn.style.display = 'inline-block';
+                        proceedBtn.onclick = () => window.location.href = '/vote';
+                    }
+                } else {
+                    status.textContent = 'Face not recognized. Please try again.';
+                    setTimeout(recognizeFace, 2000);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                status.textContent = 'Error checking status. Please try again.';
+            });
+        }
+    </script>
+</body>
+</html>

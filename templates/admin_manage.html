@@ -1,0 +1,613 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Election Management - Voting System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .voter-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .voter-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .voter-info {
+            flex-grow: 1;
+        }
+
+        .voter-info p {
+            margin: 2px 0;
+        }
+
+        .candidate-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .candidate-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .back-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #2980b9;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 10px;
+            }
+
+            .voter-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .candidate-list {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚙️ Election Management</h1>
+        <p>Manage Candidates and Voters</p>
+    </div>
+
+    <div class="container">
+        <!-- Add Candidates Section -->
+        <div class="section">
+            <h2>➕ Add Candidates</h2>
+            <div class="form-group">
+                <label for="candidate-name">Candidate Name:</label>
+                <input type="text" id="candidate-name" placeholder="Enter candidate name">
+            </div>
+            <div class="form-group">
+                <label for="candidate-position">Position Applying For:</label>
+                <input type="text" id="candidate-position" placeholder="e.g., President, MP">
+            </div>
+            <div class="form-group">
+                <label for="candidate-group">Group Name:</label>
+                <input type="text" id="candidate-group" placeholder="Enter group name">
+            </div>
+            <div class="form-group">
+                <label for="candidate-icon">Upload Group Icon:</label>
+                <input type="file" id="candidate-icon" accept="image/*">
+            </div>
+            <button class="btn" onclick="addCandidate()">Add Candidate</button>
+            <h3>Candidates</h3>
+            <div id="candidates-list" class="candidate-list">
+                <!-- Candidates will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Edit Voters Section -->
+        <div class="section">
+            <h2>👥 Edit Voters</h2>
+            <!-- Add Voter Form -->
+            <div class="form-group">
+                <label for="add-voter-name">Name:</label>
+                <input type="text" id="add-voter-name" placeholder="Enter voter name">
+            </div>
+            <div class="form-group">
+                <label for="add-voter-dob">Date of Birth:</label>
+                <input type="date" id="add-voter-dob">
+            </div>
+            <div class="form-group">
+                <label for="add-voter-aadhar">Aadhar Number:</label>
+                <input type="text" id="add-voter-aadhar" placeholder="Enter 12-digit Aadhar number" maxlength="12" pattern="[0-9]{12}" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+            </div>
+            <div class="form-group">
+                <label for="add-voter-voterid">Voter ID:</label>
+                <input type="text" id="add-voter-voterid" placeholder="Enter 10-character Voter ID" maxlength="10" pattern="[A-Za-z0-9]{10}" oninput="this.value = this.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();">
+            </div>
+            <div class="form-group">
+                <label for="add-voter-phone">Phone Number:</label>
+                <input type="text" id="add-voter-phone" placeholder="Enter 10-digit phone number" maxlength="10" pattern="[0-9]{10}" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+            </div>
+            <button class="btn" id="add-voter-btn" type="button">Add Voter</button>
+            <div class="form-group">
+                <label for="toggle-voters">Show Voters List:</label>
+                <input type="checkbox" id="toggle-voters" checked onchange="toggleVotersList()">
+            </div>
+            <div class="voter-list" id="voters-list">
+                <!-- Voters will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Edit Voter Modal -->
+        <div id="edit-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center;">
+            <div class="modal-content" style="background: rgba(255,255,255,0.95); padding: 30px; border-radius: 20px; max-width: 500px; width: 90%;">
+                <h3>Edit Voter</h3>
+                <div class="form-group">
+                    <label for="edit-voter-name">Name:</label>
+                    <input type="text" id="edit-voter-name">
+                </div>
+                <div class="form-group">
+                    <label for="edit-voter-dob">Date of Birth:</label>
+                    <input type="date" id="edit-voter-dob">
+                </div>
+                <div class="form-group">
+                    <label for="edit-voter-aadhar">Aadhar Number:</label>
+                    <input type="text" id="edit-voter-aadhar" maxlength="12" pattern="[0-9]{12}" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                </div>
+                <div class="form-group">
+                    <label for="edit-voter-voterid">Voter ID:</label>
+                    <input type="text" id="edit-voter-voterid" placeholder="Enter 10-character Voter ID" maxlength="10" pattern="[A-Za-z0-9]{10}" oninput="this.value = this.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();">
+                </div>
+                <div class="form-group">
+                    <label for="edit-voter-phone">Phone Number:</label>
+                    <input type="text" id="edit-voter-phone" placeholder="Enter 10-digit phone number" maxlength="10" pattern="[0-9]{10}" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                </div>
+                <button class="btn" onclick="saveEdit()">Save</button>
+                <button class="btn btn-danger" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Reset All Data Section -->
+        <div class="section">
+            <h2>⚠️ Reset All Data</h2>
+            <p style="color: #e74c3c; font-weight: bold;">Warning: This action will permanently delete all candidates, voters, votes, and face recognition data. This cannot be undone!</p>
+            <button class="btn btn-danger" onclick="resetAllData()">Reset All Data</button>
+        </div>
+
+        <div style="text-align: center;">
+            <button class="back-btn" onclick="window.location.href='/admin'">Back to Dashboard</button>
+        </div>
+    </div>
+
+    <script>
+        // Load candidates and voters on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCandidates();
+            loadVoters();
+
+            // Add event listener for add voter button
+            document.getElementById('add-voter-btn').addEventListener('click', addVoter);
+        });
+
+        function addCandidate() {
+            const name = document.getElementById('candidate-name').value.trim();
+            const position = document.getElementById('candidate-position').value.trim();
+            const group = document.getElementById('candidate-group').value.trim();
+            const iconFile = document.getElementById('candidate-icon').files[0];
+
+            if (!name || !position || !group) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('position', position);
+            formData.append('group', group);
+            if (iconFile) {
+                formData.append('icon', iconFile);
+            }
+
+            fetch('/add_candidate', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('candidate-name').value = '';
+                    document.getElementById('candidate-position').value = '';
+                    document.getElementById('candidate-group').value = '';
+                    document.getElementById('candidate-icon').value = '';
+                    loadCandidates();
+                } else {
+                    alert('Error adding candidate: ' + data.error);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Error adding candidate.');
+            });
+        }
+
+        function loadCandidates() {
+            fetch('/get_candidates')
+            .then(response => response.json())
+            .then(data => {
+                const list = document.getElementById('candidates-list');
+                list.innerHTML = '';
+                if (data.candidates && data.candidates.length > 0) {
+                    data.candidates.forEach(candidate => {
+                        const item = document.createElement('div');
+                        item.className = 'candidate-item';
+                        let iconHtml = '';
+                        if (candidate.icon) {
+                            iconHtml = `<img src="/${candidate.icon}" alt="${candidate.group} icon" style="width: 50px; height: 50px; margin-right: 10px;">`;
+                        }
+                        item.innerHTML = `
+                            <div style="display: flex; align-items: center;">
+                                ${iconHtml}
+                                <div>
+                                    <strong>${candidate.name}</strong><br>
+                                    <small>Position: ${candidate.position} | Group: ${candidate.group}</small>
+                                </div>
+                            </div>
+                            <button class="btn btn-danger" onclick="removeCandidate('${candidate.name}')">Remove</button>
+                        `;
+                        list.appendChild(item);
+                    });
+                } else {
+                    list.innerHTML = '<p>No candidates added yet.</p>';
+                }
+            })
+            .catch(err => {
+                console.error('Error loading candidates:', err);
+            });
+        }
+
+        function removeCandidate(name) {
+            if (!confirm(`Are you sure you want to remove candidate "${name}"?`)) return;
+
+            fetch('/remove_candidate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: name })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadCandidates();
+                } else {
+                    alert('Error removing candidate: ' + data.error);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Error removing candidate.');
+            });
+        }
+
+        function loadVoters() {
+            fetch('/get_voters')
+            .then(response => response.json())
+            .then(data => {
+                const list = document.getElementById('voters-list');
+                list.innerHTML = '';
+                if (data.voters && data.voters.length > 0) {
+                    data.voters.forEach(voter => {
+                        const item = document.createElement('div');
+                        item.className = 'voter-item';
+                        const voteButtonHtml = voter.has_voted
+                            ? '<span class="voted-status" style="color: #28a745; font-weight: bold;">Voted</span>'
+                            : `<button class="btn" onclick="window.location.href='/admin_vote/${voter.aadhar}'">Vote</button>`;
+                        item.innerHTML = `
+                            <div class="voter-info">
+                                <p><strong>Name:</strong> ${voter.name}</p>
+                                <p><strong>Aadhar:</strong> ${voter.aadhar}</p>
+                                <p><strong>Voter ID:</strong> ${voter.voterid}</p>
+                                <p><strong>Phone:</strong> ${voter.phone}</p>
+                            </div>
+                            <div>
+                                <button class="btn" onclick="editVoter('${voter.aadhar}')">Edit</button>
+                                ${voteButtonHtml}
+                                <button class="btn btn-danger" onclick="removeVoter('${voter.aadhar}')">Remove</button>
+                            </div>
+                        `;
+                        list.appendChild(item);
+                    });
+                } else {
+                    list.innerHTML = '<p>No voters registered yet.</p>';
+                }
+            })
+            .catch(err => {
+                console.error('Error loading voters:', err);
+            });
+        }
+
+        let currentEditAadhar = null;
+
+        function addVoter() {
+            console.log('addVoter called');
+            const name = document.getElementById('add-voter-name').value.trim();
+            const dob = document.getElementById('add-voter-dob').value;
+            const aadhar = document.getElementById('add-voter-aadhar').value.trim();
+            const voterid = document.getElementById('add-voter-voterid').value.trim();
+            const phone = document.getElementById('add-voter-phone').value.trim();
+
+            console.log('Fields:', { name, dob, aadhar, voterid, phone });
+
+            if (!name || !dob || !aadhar || !voterid || !phone) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            // Validate age >= 18
+            const birthDate = new Date(dob);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            if (age < 18) {
+                alert('Voter must be at least 18 years old.');
+                return;
+            }
+
+            console.log('Sending fetch to /add_voter');
+            fetch('/add_voter', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: name, dob: dob, aadhar: aadhar, voterid: voterid, phone: phone })
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    alert('Voter added successfully!');
+                    document.getElementById('add-voter-name').value = '';
+                    document.getElementById('add-voter-dob').value = '';
+                    document.getElementById('add-voter-aadhar').value = '';
+                    document.getElementById('add-voter-voterid').value = '';
+                    document.getElementById('add-voter-phone').value = '';
+                    loadVoters();
+                } else {
+                    alert('Error adding voter: ' + data.error);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Error adding voter.');
+            });
+        }
+
+        function editVoter(aadhar) {
+            currentEditAadhar = aadhar;
+            fetch('/get_voters')
+            .then(response => response.json())
+            .then(data => {
+                const voter = data.voters.find(v => v.aadhar === aadhar);
+                if (voter) {
+                    document.getElementById('edit-voter-name').value = voter.name;
+                    document.getElementById('edit-voter-dob').value = voter.dob;
+                    document.getElementById('edit-voter-aadhar').value = voter.aadhar;
+                    document.getElementById('edit-voter-voterid').value = voter.voterid;
+                    document.getElementById('edit-voter-phone').value = voter.phone;
+                    document.getElementById('edit-modal').style.display = 'flex';
+                }
+            });
+        }
+
+        function saveEdit() {
+            const name = document.getElementById('edit-voter-name').value.trim();
+            const dob = document.getElementById('edit-voter-dob').value;
+            const aadhar = document.getElementById('edit-voter-aadhar').value.trim();
+            const voterid = document.getElementById('edit-voter-voterid').value.trim();
+            const phone = document.getElementById('edit-voter-phone').value.trim();
+
+            if (!name || !dob || !aadhar || !voterid || !phone) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            // Validate age >= 18
+            const birthDate = new Date(dob);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            if (age < 18) {
+                alert('Voter must be at least 18 years old.');
+                return;
+            }
+
+            fetch('/edit_voter', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ old_aadhar: currentEditAadhar, name: name, dob: dob, aadhar: aadhar, voterid: voterid, phone: phone })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeModal();
+                    loadVoters();
+                } else {
+                    alert('Error editing voter: ' + data.error);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Error editing voter.');
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+            currentEditAadhar = null;
+        }
+
+        function removeVoter(aadhar) {
+            if (!confirm(`Are you sure you want to remove voter with Aadhar "${aadhar}"?`)) return;
+
+            fetch('/remove_voter', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ aadhar: aadhar })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadVoters();
+                    load_face_data(); // Reload face data if needed
+                } else {
+                    alert('Error removing voter: ' + data.error);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Error removing voter.');
+            });
+        }
+
+        function toggleVotersList() {
+            const checkbox = document.getElementById('toggle-voters');
+            const list = document.getElementById('voters-list');
+            if (checkbox.checked) {
+                loadVoters();
+                list.style.display = 'block';
+            } else {
+                list.style.display = 'none';
+            }
+        }
+
+        function resetAllData() {
+            if (!confirm('Are you absolutely sure you want to reset ALL data? This will permanently delete all candidates, voters, votes, and face recognition data. This action cannot be undone!')) {
+                return;
+            }
+
+            fetch('/reset_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('All data has been reset successfully.');
+                    location.reload(); // Reload the page to reflect changes
+                } else {
+                    alert('Error resetting data: ' + data.error);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Error resetting data.');
+            });
+        }
+    </script>
+</body>
+</html>

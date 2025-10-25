@@ -1,0 +1,236 @@
+""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Logs - Voting System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .logs-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: 500;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .no-logs {
+            text-align: center;
+            padding: 50px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.2rem;
+        }
+
+        .back-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #2980b9;
+        }
+
+        .refresh-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            margin-left: 10px;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #c0392b;
+        }
+
+        .buttons {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 10px;
+            }
+
+            .logs-container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📝 System Logs</h1>
+        <p>Admin Activity and Data Modifications</p>
+    </div>
+
+    <div class="container">
+        <div class="buttons">
+            <button class="back-btn" onclick="window.location.href='/admin'">Back to Dashboard</button>
+            <button class="refresh-btn" onclick="loadLogs()">Refresh Logs</button>
+        </div>
+
+        <div class="logs-container" id="logs-container">
+            <div class="no-logs">Loading logs...</div>
+        </div>
+    </div>
+
+    <script>
+        function loadLogs() {
+            fetch('/get_logs')
+            .then(response => response.json())
+            .then(data => {
+                const logsContainer = document.getElementById('logs-container');
+                if (data.logs && data.logs.length > 0) {
+                    let tableHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Action Performed</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    data.logs.forEach(log => {
+                        const parts = log.split(' - ');
+                        if (parts.length >= 3) {
+                            const timestamp = parts[0];
+                            const level = parts[1];
+                            const message = parts.slice(2).join(' - ');
+
+                            // Parse message for user-friendly display
+                            let action = level;
+                            let details = message;
+
+                            if (message.includes('Admin added candidate:')) {
+                                action = 'Added Candidate';
+                                details = message.replace('Admin added candidate: ', '');
+                            } else if (message.includes('Admin removed candidate:')) {
+                                action = 'Removed Candidate';
+                                details = message.replace('Admin removed candidate: ', '');
+                            } else if (message.includes('Admin added voter:')) {
+                                action = 'Added Voter';
+                                details = message.replace('Admin added voter: ', '');
+                            } else if (message.includes('Admin edited voter:')) {
+                                action = 'Edited Voter';
+                                details = message.replace('Admin edited voter: ', '');
+                            } else if (message.includes('Admin removed voter:')) {
+                                action = 'Removed Voter';
+                                details = message.replace('Admin removed voter: ', '');
+                            } else if (message.includes('Admin voted for voter:')) {
+                                action = 'Admin Voted';
+                                details = message.replace('Admin voted for voter: ', '');
+                            }
+
+                            tableHTML += `
+                                <tr>
+                                    <td>${timestamp}</td>
+                                    <td>${action}</td>
+                                    <td>${details}</td>
+                                </tr>
+                            `;
+                        }
+                    });
+
+                    tableHTML += `
+                            </tbody>
+                        </table>
+                    `;
+
+                    logsContainer.innerHTML = tableHTML;
+                } else {
+                    logsContainer.innerHTML = '<div class="no-logs">No activity logs available.</div>';
+                }
+            })
+            .catch(err => {
+                console.error('Error loading logs:', err);
+                document.getElementById('logs-container').innerHTML = '<div class="no-logs">Error loading activity logs.</div>';
+            });
+        }
+
+        // Load logs on page load
+        loadLogs();
+    </script>
+</body>
+</html>

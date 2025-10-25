@@ -46,12 +46,16 @@
             .then(data => {
                 if (data.success) {
                     status.textContent = 'Face captured successfully! Redirecting...';
-                    setTimeout(() => window.location.href = '/vote', 2000);
+                    setTimeout(() => window.location.href = data.redirect || '/vote', 2000);
                 } else if (data.error) {
                     status.textContent = data.error;
                 } else {
                     status.textContent = 'No face detected. Try again.';
                 }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                status.textContent = 'Error capturing face. Please try again.';
             });
         });
     </script>

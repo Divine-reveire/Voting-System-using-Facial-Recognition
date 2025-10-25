@@ -213,7 +213,7 @@
                 <div class="stat-card">
                     <span class="stat-icon">👥</span>
                     <div class="stat-number" id="total-voters">0</div>
-                    <div class="stat-label">Total Registered Voters</div>
+                    <div class="stat-label">Total Votes</div>
                 </div>
 
                 <div class="stat-card">
@@ -225,14 +225,10 @@
                 <div class="stat-card">
                     <span class="stat-icon">⏰</span>
                     <div class="stat-number" id="remaining-voters">0</div>
-                    <div class="stat-label">Remaining Voters</div>
+                    <div class="stat-label">Remaining Votes</div>
                 </div>
 
-                <div class="stat-card">
-                    <span class="stat-icon">🛡️</span>
-                    <div class="stat-number" id="duplicate-attempts">0</div>
-                    <div class="stat-label">Duplicate Attempts Blocked</div>
-                </div>
+
             </div>
 
             <div class="actions">
@@ -242,11 +238,7 @@
                     <div class="action-desc">See real-time voting statistics and party-wise results</div>
                 </div>
 
-                <div class="action-card" onclick="viewVoters()">
-                    <span class="action-icon">📋</span>
-                    <div class="action-title">Voter Management</div>
-                    <div class="action-desc">View registered voters and voting status</div>
-                </div>
+
 
                 <div class="action-card" onclick="systemLogs()">
                     <span class="action-icon">📝</span>
@@ -254,10 +246,10 @@
                     <div class="action-desc">View system activity and security logs</div>
                 </div>
 
-                <div class="action-card" onclick="exportData()">
-                    <span class="action-icon">💾</span>
-                    <div class="action-title">Export Data</div>
-                    <div class="action-desc">Export voting data and reports</div>
+                <div class="action-card" onclick="manageElection()">
+                    <span class="action-icon">⚙️</span>
+                    <div class="action-title">Election Management</div>
+                    <div class="action-desc">Add candidates and edit voter details</div>
                 </div>
             </div>
 
@@ -300,7 +292,6 @@
                 document.getElementById('total-voters').textContent = data.total_voters || 0;
                 document.getElementById('votes-cast').textContent = data.votes_cast || 0;
                 document.getElementById('remaining-voters').textContent = (data.total_voters - data.votes_cast) || 0;
-                document.getElementById('duplicate-attempts').textContent = data.duplicate_attempts || 0;
             })
             .catch(err => {
                 console.error('Error loading stats:', err);
@@ -308,12 +299,11 @@
                 document.getElementById('total-voters').textContent = '0';
                 document.getElementById('votes-cast').textContent = '0';
                 document.getElementById('remaining-voters').textContent = '0';
-                document.getElementById('duplicate-attempts').textContent = '0';
             });
         }
 
         function viewResults() {
-            alert('Voting Results feature coming soon!');
+            window.location.href = '/voting_results';
         }
 
         function viewVoters() {
@@ -321,11 +311,15 @@
         }
 
         function systemLogs() {
-            alert('System Logs feature coming soon!');
+            window.location.href = '/admin_logs';
         }
 
         function exportData() {
             alert('Export Data feature coming soon!');
+        }
+
+        function manageElection() {
+            window.location.href = '/admin_manage';
         }
     </script>
 </body>
